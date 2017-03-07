@@ -5,8 +5,8 @@ dates = string(['0226';'0227';'0228';'0301';'0302';'0303';'0304']);
 imdir = 'Z:\imaging\wheel_run_5\signals\';
 rundir = 'Z:\imaging\wheel_run_5\rpm\';
 
-nummice = length(mice);
-numdays = length(dates);
+nummice = size(mice,1);
+numdays = size(dates,1);
 numbins = 25;
 hgrid = linspace(-1,1,numbins);
 MVL_d = zeros(numdays,numbins);
