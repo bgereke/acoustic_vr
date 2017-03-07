@@ -20,8 +20,8 @@ matching_ss=strcat(animal,'_',day);
 
 % get list of rpm files
 sf=fp; % sig folder
-strfind(sf,'signals');
-sf(24:end)='';
+ind=strfind(sf,'signals');
+sf(ind:end)='';
 rf=strcat(sf,'rpm\');
 
 files = dir(fullfile(rf, '*.txt')); 
