@@ -1,6 +1,12 @@
 function [ rpm_fn ] = match_sig_to_rpm_fn( sig_path )
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+% give full path to a signal file, this will return the matching rpm file
+%
+% e.g.
+% sig_path='X:\imaging\wheel_run_5\signals\md229_02262017_r2_003_signals.mat';
+% match_sig_to_rpm_fn( sig_path );
+% returns correct rpm file
+% return blank string if two or more rpm files are found, or no rpm files
+
 
 
 
