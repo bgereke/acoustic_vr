@@ -136,16 +136,15 @@ elseif strcmp(kmethod,'vonMises')
    maps = (trans'*vmk./repmat(occupancy,numcells,1))';
    %get mean vector length for each cell
    numsamps = 10000;
-   samp = zeros(numsamps,1);
    for c = 1:numcells
-       numt = sum(trans(:,c));
+      numt = sum(trans(:,c));
       if numt>3 %don't compute if less than 4 transients
-          mvl(c) = abs(sum(cos(cpos(trans(:,c)==1))+1i*sin(cpos(trans(:,c)==1))))/numt;
-          for s = 1:numsamps
-              randpos = randsample(cpos,numt);
-              samp(s) = abs(sum(cos(randpos)+1i*sin(randpos)))/numt;
-          end
-          dbmvl(c) = mvl(c) - median(samp);
+          mvl(c) = abs(sum(cos(cpos(trans(:,c)==1))+1i*sin(cpos(trans(:,c)==1))))/numt; %mean vector length
+          randpos = zeros(numsamps,numt);
+          for s = 1:numt
+              randpos(:,s) = randsample(unique(cpos),numsamps,true);              
+          end          
+          dbmvl(c) = mvl(c) - median(abs(sum(cos(randpos)+1i*sin(randpos),2))/numt); %debiased mean vector length
       end
    end
 else    
