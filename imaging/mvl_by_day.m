@@ -2,18 +2,18 @@
 
 mice = string(['md229';'md230';'md231']);
 dates = string(['0226';'0227';'0228';'0301';'0302';'0303';'0304']);
-imdir = 'Z:\imaging\wheel_run_5\signals/';
-rundir = 'Z:\imaging\wheel_run_5\rpm/';
+imdir = 'x:\imaging\wheel_run_5\signals/';
+rundir = 'X:\imaging\wheel_run_5\rpm/';
 
-nummice = length(mice);
-numdays = length(dates);
+nummice = size(mice,1);
+numdays = size(dates,1);
 numbins = 15;
 hgrid = linspace(0,1,numbins);
 MVL_d = zeros(numdays,numbins);
 
 for d = 1:numdays
     for m = 1:nummice
-        filestart = strcat(mice(m),'_',dates(d));
+        filestart = strcat(mice(m,:),'_',dates(d,:));
         %check for existence and load calcium data
         exists = 0;
         cd(imdir)
@@ -45,15 +45,19 @@ for d = 1:numdays
         end        
     end
 end
+
+
 %covert to probabilities
 MVL_d = MVL_d./repmat(sum(MVL_d,2),1,size(MVL_d,2));
+
 %make plot
-c = colormap(copper(numdays));
+figure;
+c = colormap(jet(numdays));
 for d = 1:numdays
  hold on
  plot(hgrid,MVL_d(d,:),'LineWidth',2,'Color',c(d,:)');
 end
-legend(string(1:numdays))
+legend(strread(num2str(1:numdays),'%s'))
 xlabel('mean vector length')
 ylabel('probability')
 xlim([0 1])
