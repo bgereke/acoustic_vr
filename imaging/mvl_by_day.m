@@ -57,3 +57,5 @@ legend(strread(num2str(1:numdays),'%s'))
 xlabel('mean vector length')
 ylabel('probability')
 xlim([-1 1])
+% my changes are already in this file, so I added this comment that we can
+% delete later
