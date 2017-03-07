@@ -1,4 +1,4 @@
-function [maps, grid, mvl, bps, bpt] = ratemap(F,pos,it,pt,ngrid,tmethod,kmethod,FWHM)
+function [maps, grid, mvl, dbmvl, bps, bpt] = ratemap(F,pos,it,pt,ngrid,tmethod,kmethod,FWHM)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Compute spatial rate maps for calcium flourescence imaging data
@@ -19,6 +19,7 @@ function [maps, grid, mvl, bps, bpt] = ratemap(F,pos,it,pt,ngrid,tmethod,kmethod
 %grid - vector of length ngrid specifying position of rate map
 %bps - vector of length numcells specifying spatial information for each map in bits per second
 %mvl - mean vector length of transient complex sum (only for vonMises)
+%dbmvl - a debiased version of mvl
 %bpt - vector of length numcells specifying spatial information for each map in bits per transient
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Example - [maps,grid,bps,bpt] = ratemap(dF,lap_position,ct,ard_timestamp,100,'deconv','vonMises',30);
@@ -26,8 +27,8 @@ function [maps, grid, mvl, bps, bpt] = ratemap(F,pos,it,pt,ngrid,tmethod,kmethod
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 [numframes, numcells] = size(F);
-w = [];
 mvl = nan(numcells,1);
+dbmvl = nan(numcells,1);
 
 %detect transients
 trans = zeros(size(F)); %transients
@@ -134,9 +135,17 @@ elseif strcmp(kmethod,'vonMises')
    occupancy = dt*vmk;
    maps = (trans'*vmk./repmat(occupancy,numcells,1))';
    %get mean vector length for each cell
+   numsamps = 10000;
+   samp = zeros(numsamps,1);
    for c = 1:numcells
-      if sum(trans(:,c))>3 %don't compute if less than 4 transients
-          mvl(c) = abs(sum(cos(cpos(trans(:,c)==1))+1i*sin(cpos(trans(:,c)==1))))/sum(trans(:,c));
+       numt = sum(trans(:,c));
+      if numt>3 %don't compute if less than 4 transients
+          mvl(c) = abs(sum(cos(cpos(trans(:,c)==1))+1i*sin(cpos(trans(:,c)==1))))/numt;
+          for s = 1:numsamps
+              randpos = randsample(cpos,numt);
+              samp(s) = abs(sum(cos(randpos)+1i*sin(randpos)))/numt;
+          end
+          dbmvl(c) = mvl(c) - median(samp);
       end
    end
 else    

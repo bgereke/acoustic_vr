@@ -2,8 +2,8 @@
 
 mice = string(['md229';'md230';'md231']);
 dates = string(['0226';'0227';'0228';'0301';'0302';'0303';'0304']);
-imdir = 'Z:\imaging\wheel_run_5\signals/';
-rundir = 'Z:\imaging\wheel_run_5\rpm/';
+imdir = 'Z:\imaging\wheel_run_5\signals\';
+rundir = 'Z:\imaging\wheel_run_5\rpm\';
 
 nummice = length(mice);
 numdays = length(dates);
@@ -13,7 +13,7 @@ MVL_d = zeros(numdays,numbins);
 
 for d = 1:numdays
     for m = 1:nummice
-        filestart = strcat(mice(m),'_',dates(d));
+        filestart = strcat(mice(m,:),'_',dates(d,:));
         %check for existence and load calcium data
         exists = 0;
         cd(imdir)
@@ -40,8 +40,8 @@ for d = 1:numdays
             ct = cumsum(ct);
             ard_timestamp = (runtable.ard_timestamp - min(runtable.ard_timestamp))/1000 + cdt;
             [dF,nF,zF] = deltaF(raw,2);
-            [maps,grid,nmvl,bpsl,bptl] = ratemap(nF,runtable.lap_position,ct,ard_timestamp,100,'nthresh','vonMises',30);
-            MVL_d(d,:) = MVL_d(d,:) + hist(nmvl,hgrid);
+            [maps,grid,mvl,dbmvl,bpsl,bptl] = ratemap(nF,runtable.lap_position,ct,ard_timestamp,100,'nthresh','vonMises',30);
+            MVL_d(d,:) = MVL_d(d,:) + hist(dbmvl,hgrid);
         end        
     end
 end
@@ -53,7 +53,7 @@ for d = 1:numdays
  hold on
  plot(hgrid,MVL_d(d,:),'LineWidth',2,'Color',c(d,:)');
 end
-legend(string(1:numdays))
+legend(strread(num2str(1:numdays),'%s'))
 xlabel('mean vector length')
 ylabel('probability')
 xlim([0 1])
