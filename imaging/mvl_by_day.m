@@ -10,8 +10,12 @@ numdays = length(dates);
 numbins = 25;
 hgrid = linspace(-1,1,numbins);
 MVL_d = zeros(numdays,numbins);
+frac_pos = zeros(numdays,3); %fraction of positive dbmvl for each day with bootstrapped confidence intervals
+numboots = 10000; %numbootstraps
 
 for d = 1:numdays
+    DBMVL = cell(1,1); %store all the dbmvl's for bootstrapping 
+    mcount = 0;
     for m = 1:nummice
         filestart = strcat(mice(m,:),'_',dates(d,:));
         %check for existence and load calcium data
@@ -25,6 +29,7 @@ for d = 1:numdays
             end
         end
         if exists
+            mcount = mcount + 1;
             %load run data
             cd(rundir)
             runfiles = dir('*.txt');
@@ -42,8 +47,29 @@ for d = 1:numdays
             [dF,nF,zF] = deltaF(raw,2);
             [maps,grid,mvl,dbmvl,bpsl,bptl] = ratemap(nF,runtable.lap_position,ct,ard_timestamp,100,'nthresh','vonMises',30);
             MVL_d(d,:) = MVL_d(d,:) + hist(dbmvl,hgrid);
-        end        
+            DBMVL{mcount} = dbmvl;
+        end             
+        %do multilevel bootstrap
+        nummice_d = numel(DBMVL);
+        numpos = 0;numtot = 0;
+        for nm = 1:nummice_d
+            numpos = numpos + sum(DBMVL{nm}>0);
+            numtot = numtot + length(DBMVL{nm});
+        end
+        frac_pos(d,1) = numpos/numtot;
+        bootfracpos = zeros(numboots,1);
+        for b = 1:numboots
+            samp = [];
+            mboot = randsample(nummice_d,nummice_d,true); %random draw from this day's mice
+            %random draw from mouse's dbmvl's
+            for bm = 1:nummice_d
+               samp = [samp; randsample(DBMVL{mboot(bm)},length(DBMVL{mboot(bm)}),true)]; 
+            end
+            bootfracpos(b) = sum(samp>0)/length(samp);
+        end
+        frac_pos(d,2:3) = quantile(bootfracpos,[0.025 0.975]);
     end
+    disp(sprintf('%s%s','Completed ',num2str(d),' of ',num2str(numdays)))
 end
 %covert to probabilities
 MVL_d = MVL_d./repmat(sum(MVL_d,2),1,size(MVL_d,2));
@@ -57,5 +83,15 @@ legend(strread(num2str(1:numdays),'%s'))
 xlabel('mean vector length')
 ylabel('probability')
 xlim([-1 1])
-% my changes are already in this file, so I added this comment that we can
-% delete later
+
+figure
+for d = 1:numdays
+   hold on
+   plot([d d],frac_pos(d,2:3),'-k');
+   plot(d,frac_pos(d,1),'ok');
+end
+plot([0 numdays+1],[0.5 0.5],'--k');
+xlabel('day')
+ylabel('fraction of positive debiased mean vector lengths')
+xlim([0 numdays+1])
+ylim([0 1])
