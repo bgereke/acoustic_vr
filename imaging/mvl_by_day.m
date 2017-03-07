@@ -80,6 +80,7 @@ for d = 1:numdays
  plot(hgrid,MVL_d(d,:),'LineWidth',2,'Color',c(d,:)');
 end
 legend(strread(num2str(1:numdays),'%s'))
+plot([0 0],[0 max(MVL_d(:))+0.01],'--k')
 xlabel('mean vector length')
 ylabel('probability')
 xlim([-1 1])
