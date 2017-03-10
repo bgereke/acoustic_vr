@@ -56,8 +56,9 @@ for d = 1:numdays
             MVLp_d(d,:) = MVLp_d(d,:) + hist(mvlp,pgrid);
             DBMVL{mcount} = dbmvl;
             MVLP{mcount} = mvlp;
-        end             
-        %do multilevel bootstrap
+        end          
+    end
+    %do multilevel bootstrap
         nummice_d = numel(DBMVL);
         numpos = 0;numsig=0;numtot = 0;
         for nm = 1:nummice_d
@@ -82,7 +83,6 @@ for d = 1:numdays
         end
         frac_pos(d,2:3) = quantile(bootfracpos,[0.025 0.975]);
         frac_sig(d,2:3) = quantile(bootfracsig,[0.025 0.975]);
-    end
     disp(sprintf('%s%s','Completed ',num2str(d),' of ',num2str(numdays)))
 end
 %covert to probabilities
