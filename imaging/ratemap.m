@@ -1,4 +1,4 @@
-function [maps, grid, mvl, dbmvl, mvlp, bps, bpt, ftrans] = ratemap(F,pos,it,pt,ngrid,tmethod,kmethod,FWHM)
+function [maps, pmap, grid, mvl, dbmvl, mvlp, bps, bpt, ftrans] = ratemap(F,pos,it,pt,ngrid,tmethod,kmethod,FWHM)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Compute spatial rate maps for calcium flourescence imaging data
@@ -16,6 +16,7 @@ function [maps, grid, mvl, dbmvl, mvlp, bps, bpt, ftrans] = ratemap(F,pos,it,pt,
 %FWHM - kernel full width at half max in position units
 %Output:
 %maps - [ngrid x numcells] matrix of rate maps
+%pmap - ngrid length vector specifying ratemap for transients from entire population
 %grid - vector of length ngrid specifying position of rate map
 %bps - vector of length numcells specifying spatial information for each map in bits per second
 %mvl - mean vector length of transient complex sum (only for vonMises)
@@ -99,6 +100,9 @@ else
    disp('tmethod must be nthresh, zthresh, deconv, or none') 
 end
 
+%population activity
+poptrans = sum(trans,2);
+
 %compute rate maps using specified kernel method
 if strcmp(kmethod,'gaussian')
    %set map evaluation grid
@@ -118,6 +122,7 @@ if strcmp(kmethod,'gaussian')
    dt = [dt(1) dt];
    occupancy = dt*gk; 
    maps = (trans'*gk./repmat(occupancy,numcells,1))';
+   pmap = (poptrans'*gk./repmat(occupancy,numcells,1))';
     
 elseif strcmp(kmethod,'vonMises')
     %set map evaluation grid
@@ -142,6 +147,7 @@ elseif strcmp(kmethod,'vonMises')
    occupancy = dt*vmk;
    px = occupancy/sum(occupancy); %occupancies converted to probabilities 
    maps = (trans'*vmk./repmat(occupancy,numcells,1))';
+   pmap = (poptrans'*vmk./repmat(occupancy,numcells,1))';
    %get mean vector length for each cell
    posrad = exp(1i*cpos);
    [~,midx] = min(abs(repmat(posrad,1,ngrid)-repmat(exp(1i*grid),numframes,1)),[],2);
@@ -170,3 +176,4 @@ dgrid = grid(2) - grid(1);
 trate = px*maps; %mean transient rate
 bps = dgrid*sum(maps.*log2(maps./repmat(trate,ngrid,1)).*repmat(px',1,numcells)); %bits/sec
 bpt = bps./trate; %bits/transient
+
