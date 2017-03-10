@@ -1,4 +1,4 @@
-function [maps, grid, mvl, dbmvl, bps, bpt] = ratemap(F,pos,it,pt,ngrid,tmethod,kmethod,FWHM)
+function [maps, grid, mvl, dbmvl, mvlp, bps, bpt, ftrans] = ratemap(F,pos,it,pt,ngrid,tmethod,kmethod,FWHM)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Compute spatial rate maps for calcium flourescence imaging data
@@ -20,7 +20,9 @@ function [maps, grid, mvl, dbmvl, bps, bpt] = ratemap(F,pos,it,pt,ngrid,tmethod,
 %bps - vector of length numcells specifying spatial information for each map in bits per second
 %mvl - mean vector length of transient complex sum (only for vonMises)
 %dbmvl - a debiased version of mvl
+%mvlp - approximate p-value for each mvl
 %bpt - vector of length numcells specifying spatial information for each map in bits per transient
+%ftrans - [numframes x numcells] matrix specifying full binarized transients for each cell
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Example - [maps,grid,bps,bpt] = ratemap(dF,lap_position,ct,ard_timestamp,100,'deconv','vonMises',30);
 %ct and ard_timestamp are from 'plot_dF_on_pos.m'
@@ -29,9 +31,11 @@ function [maps, grid, mvl, dbmvl, bps, bpt] = ratemap(F,pos,it,pt,ngrid,tmethod,
 [numframes, numcells] = size(F);
 mvl = nan(numcells,1);
 dbmvl = nan(numcells,1);
+mvlp = nan(numcells,1);
 
 %detect transients
 trans = zeros(size(F)); %transients
+ftrans = trans; %full binarized transients for output
 if strcmp(tmethod,'nthresh')
     trans = zeros(size(F));
     hthresh = F>1; %upper threshold
@@ -49,6 +53,7 @@ if strcmp(tmethod,'nthresh')
                w = eidx-sidx;
                if w >= 4 %delete transients that aren't wide enough
                   trans(sidx,c) = 1; 
+                  ftrans(sidx:eidx,c) = 1;
                end
            end
        end
@@ -70,6 +75,7 @@ elseif strcmp(tmethod,'zthresh')
                w = eidx-sidx;
                if w >= 4 %delete transients that aren't wide enough
                   trans(sidx,c) = 1; 
+                  ftrans(sidx:eidx,c) = 1;
                end
            end
        end
@@ -85,6 +91,7 @@ elseif strcmp(tmethod,'deconv')
         [dconv, ~] = deconv(sm,exp(-expgrid)); %exponential deconvolution
         s = abs(min(dconv));
         trans(dconv>s,c) = 1; %spike detection
+        ftrans = trans;
     end
 elseif strcmp(tmethod,'none')
     trans = F;
@@ -133,18 +140,25 @@ elseif strcmp(kmethod,'vonMises')
    dt = diff(it)';
    dt = [dt(1) dt];
    occupancy = dt*vmk;
+   px = occupancy/sum(occupancy); %occupancies converted to probabilities 
    maps = (trans'*vmk./repmat(occupancy,numcells,1))';
    %get mean vector length for each cell
-   numsamps = 10000;
+   posrad = exp(1i*cpos);
+   [~,midx] = min(abs(repmat(posrad,1,ngrid)-repmat(exp(1i*grid),numframes,1)),[],2);
+   weights = 1./px(midx); %inverse occupancies
    for c = 1:numcells
       numt = sum(trans(:,c));
-      if numt>3 %don't compute if less than 4 transients
-          mvl(c) = abs(sum(cos(cpos(trans(:,c)==1))+1i*sin(cpos(trans(:,c)==1))))/numt; %mean vector length
-          randpos = zeros(numsamps,numt);
-          for s = 1:numt
-              randpos(:,s) = randsample(unique(cpos),numsamps,true);              
-          end          
-          dbmvl(c) = mvl(c) - median(abs(sum(cos(randpos)+1i*sin(randpos),2))/numt); %debiased mean vector length
+      if numt>3 %don't compute if less than 4 transients              
+          mvl(c) = abs(weights(trans(:,c)==1)*posrad(trans(:,c)==1)/sum(weights(trans(:,c)==1))); %mean vector length
+          %do permutation testing (num permutations = numframes)
+          fmvl  = zeros(numframes,1);
+          ftrans = toeplitz([trans(1,c) fliplr(trans(2:end,c)')], trans(:,c)')'; %all temporal shifts of transients           
+          for f = 1:numframes     
+             fmvl(f) = abs(weights(ftrans(:,f)==1)*posrad(ftrans(:,f)==1)/sum(weights(ftrans(:,f)==1)));
+          end
+          %debias + p-value
+          dbmvl(c) = mvl(c) - median(fmvl); 
+          mvlp(c) = sum(fmvl>=mvl(c))/numframes;
       end
    end
 else    
@@ -153,7 +167,6 @@ end
 
 %get spatial information for each map
 dgrid = grid(2) - grid(1);
-px = occupancy/sum(occupancy); %occupancies converted to probabilities 
 trate = px*maps; %mean transient rate
 bps = dgrid*sum(maps.*log2(maps./repmat(trate,ngrid,1)).*repmat(px',1,numcells)); %bits/sec
 bpt = bps./trate; %bits/transient
