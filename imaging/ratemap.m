@@ -122,7 +122,7 @@ if strcmp(kmethod,'gaussian')
    dt = [dt(1) dt];
    occupancy = dt*gk; 
    maps = (trans'*gk./repmat(occupancy,numcells,1))';
-   pmap = (poptrans'*gk./repmat(occupancy,numcells,1))';
+   pmap = (poptrans'*gk./occupancy)';
     
 elseif strcmp(kmethod,'vonMises')
     %set map evaluation grid
@@ -147,7 +147,7 @@ elseif strcmp(kmethod,'vonMises')
    occupancy = dt*vmk;
    px = occupancy/sum(occupancy); %occupancies converted to probabilities 
    maps = (trans'*vmk./repmat(occupancy,numcells,1))';
-   pmap = (poptrans'*vmk./repmat(occupancy,numcells,1))';
+   pmap = (poptrans'*vmk./occupancy)';
    %get mean vector length for each cell
    posrad = exp(1i*cpos);
    [~,midx] = min(abs(repmat(posrad,1,ngrid)-repmat(exp(1i*grid),numframes,1)),[],2);
